@@ -1,0 +1,36 @@
+/left/replay_controller:
+  ros__parameters:
+    joints:
+    - left_joint1
+    - left_joint2
+    - left_joint3
+    - left_joint4
+    - left_joint5
+    - left_gripper_joint_1
+    command_interfaces:
+    - position
+    state_interfaces:
+    - position
+    - velocity
+    allow_partial_joints_goal: false
+/left/joint_state_broadcaster:
+  ros__parameters:
+    use_local_topics: false
+/right/replay_controller:
+  ros__parameters:
+    joints:
+    - right_joint1
+    - right_joint2
+    - right_joint3
+    - right_joint4
+    - right_joint5
+    - right_gripper_joint_1
+    command_interfaces:
+    - position
+    state_interfaces:
+    - position
+    - velocity
+    allow_partial_joints_goal: false
+/right/joint_state_broadcaster:
+  ros__parameters:
+    use_local_topics: false

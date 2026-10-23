@@ -1,0 +1,14 @@
+ROBOTIS OpenMANIPULATOR description assets are copied unchanged from
+https://github.com/ROBOTIS-GIT/open_manipulator
+commit d31000d90c679af9c982e73de8b12d777c5ff7dd, Apache-2.0.
+description/CMakeLists.txt installs only the OMX-AI follower resources.
+
+replay.py derives from the ROS 2 replay implementation in
+https://github.com/DUARO-hanium/replay_final
+commit 817c3d3c5cbb340e586fea342ce94f68e3a23916 (package license Apache-2.0).
+Changes: independent left/right CSVs, common start timestamp, joint prefixes,
+current-pose approach, interruption hold, hardware fault monitoring, and final-pose hold.
+
+The hardware settings and bundled package_data recording come from DUARO-hanium's OMX-AI
+hand-guided bimanual workspace. Arm motors use extended position mode 4;
+grippers use current-based position mode 5 with 100 mA current limits.

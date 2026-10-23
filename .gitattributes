@@ -1,0 +1,2 @@
+data/*/*.csv -text whitespace=cr-at-eol
+data/*/metadata.json -text

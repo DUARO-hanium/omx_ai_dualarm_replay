@@ -1,0 +1,133 @@
+{
+  "format": "replay_final_csv_v1",
+  "status": "complete",
+  "started_utc": "2026-10-23T17:50:16.502321+00:00",
+  "target_hz": 30.0,
+  "joint_names": [
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "gripper_joint_1"
+  ],
+  "units": "radian",
+  "samples": 2764,
+  "duration_s": 92.1002337359987,
+  "max_read_span_s": 0.013910990999647765,
+  "capture_mode": "hand_guided_hold",
+  "holds": [
+    {
+      "time": 35.46696976699968,
+      "side": "left",
+      "held": true
+    },
+    {
+      "time": 77.16679767049936,
+      "side": "right",
+      "held": true
+    }
+  ],
+  "initial_positions_rad": {
+    "left": [
+      -0.20248546400111156,
+      -1.9588934661301707,
+      1.7380002326742243,
+      1.566194384431033,
+      -0.09050486648545997,
+      1.7073206169165118
+    ],
+    "right": [
+      0.032213596545391354,
+      -1.983437158736341,
+      1.705786636128626,
+      1.4787574795215512,
+      -0.21475731030419665,
+      -1.9174759848572585
+    ]
+  },
+  "devices": {
+    "left": {
+      "device": "/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_9A866EFE5157375037202020FF0C1B37-if00",
+      "motors": {
+        "11": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "12": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "13": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "14": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "15": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "16": {
+          "model": 1200,
+          "homing_offset": 23,
+          "drive_mode": 4,
+          "operating_mode": 5
+        }
+      }
+    },
+    "right": {
+      "device": "/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_6AFAC93B5157375037202020FF0F272E-if00",
+      "motors": {
+        "11": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "12": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "13": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "14": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "15": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "16": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 5
+        }
+      }
+    }
+  }
+}

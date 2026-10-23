@@ -1,0 +1,7 @@
+/results/
+/data/*
+!/data/package_data/
+__pycache__/
+*.py[cod]
+*.tmp
+.DS_Store
