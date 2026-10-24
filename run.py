@@ -47,6 +47,28 @@ def inspect(take):
     return metadata
 
 
+def recording(name):
+    take = (Path('/data') / name).resolve()
+    if take.parent != Path('/data') or not take.is_dir():
+        raise ValueError('Choose an existing recording folder directly under data/.')
+    return take, inspect(take)
+
+
+def check_session(metadata, args, session):
+    if args.mock != session['mock']:
+        raise ValueError('The active session and this command must use the same --mock setting.')
+    for side in ('left', 'right'):
+        port = getattr(args, side+'_port') or metadata['devices'][side]['device']
+        if Path(port).resolve() != Path(session['ports'][side]).resolve():
+            raise ValueError(f'{side}: use the USB port of the active session.')
+        for mid in map(str, range(11, 17)):
+            motor = metadata['devices'][side]['motors'][mid]
+            active = session['devices'][side]['motors'][mid]
+            if (any(motor[key] != active[key] for key in ('model', 'homing_offset'))
+                    or (motor['drive_mode'] & 1) != (active['drive_mode'] & 1)):
+                raise ValueError(f'{side} ID {mid}: coordinates differ from the active session.')
+
+
 def release(ports):
     from dynamixel_sdk import COMM_SUCCESS, PacketHandler, PortHandler
     packet = PacketHandler(2.0)
@@ -83,15 +105,15 @@ def main():
     parser.add_argument('--check', action='store_true')
     parser.add_argument('--torque-off-only', action='store_true')
     parser.add_argument('--confirmed', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('--enqueue', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('--request-id', default='', help=argparse.SUPPRESS)
     parser.add_argument('--left-port')
     parser.add_argument('--right-port')
     args = parser.parse_args()
     if not math.isfinite(args.align) or args.align <= .1 or not math.isfinite(args.speed) or args.speed <= 0:
         parser.error('Require --align > 0.1 and --speed > 0.')
-    take = (Path('/data') / args.take).resolve()
-    if take.parent != Path('/data') or not take.is_dir():
-        parser.error('Choose an existing recording folder directly under data/.')
-    metadata = inspect(take)
+    take, metadata = recording(args.take)
+    args.take = take.name
     if args.inspect:
         return
     ports = {side: getattr(args, side+'_port') or metadata['devices'][side]['device']
@@ -113,17 +135,46 @@ def main():
     if not args.mock and not args.confirmed:
         parser.error('Start real replay with ./replay.sh TAKE and press Enter.')
 
-    output = Path('/results') / f'{args.take}-{datetime.now(timezone.utc):%Y%m%dT%H%M%S%fZ}'
-    output.mkdir(parents=True)
-    uid, gid = int(os.environ.get('HOST_UID', 0)), int(os.environ.get('HOST_GID', 0))
+    status_path = Path('/results/status.json')
+    request_path = Path('/results/next.json')
+    if args.enqueue:
+        current = json.loads(status_path.read_text())
+        if current.get('protocol') != 2 or current['phase'] != 'holding':
+            raise RuntimeError('The active session must have finished replay normally before the next replay.')
+        check_session(metadata, args, current['session'])
+        if request_path.exists():
+            raise RuntimeError('Another replay request is already pending.')
+        request = {key: getattr(args, key) for key in
+                   ('take', 'align', 'speed', 'request_id', 'left_port', 'right_port')}
+        temporary = request_path.with_suffix('.json.tmp')
+        temporary.write_text(json.dumps(request)+'\n')
+        temporary.replace(request_path)
+        print('Next replay requested; existing controllers and torque remain active.', flush=True)
+        return
 
-    def state(phase, message):
-        path = Path('/results/status.json')
-        temporary = path.with_suffix('.json.tmp')
-        temporary.write_text(json.dumps({'phase': phase, 'message': message,
-            'take': args.take, 'mock': args.mock, 'output': str(output)}, ensure_ascii=False)+'\n')
+    request_path.unlink(missing_ok=True)
+    outputs = []
+
+    def new_output():
+        path = Path('/results') / f'{args.take}-{datetime.now(timezone.utc):%Y%m%dT%H%M%S%fZ}'
+        path.mkdir(parents=True)
+        outputs.append(path)
+        return path
+
+    output = new_output()
+    uid, gid = int(os.environ.get('HOST_UID', 0)), int(os.environ.get('HOST_GID', 0))
+    session = {'mock': args.mock, 'ports': ports, 'devices': metadata['devices']}
+    phase = 'starting'
+
+    def state(next_phase, message):
+        nonlocal phase
+        phase = next_phase
+        temporary = status_path.with_suffix('.json.tmp')
+        temporary.write_text(json.dumps({'protocol': 2, 'phase': phase, 'message': message,
+            'request_id': args.request_id, 'take': args.take, 'mock': args.mock,
+            'output': str(output), 'session': session}, ensure_ascii=False)+'\n')
         os.chown(temporary, uid, gid)
-        temporary.replace(path)
+        temporary.replace(status_path)
 
     def torque_off(_signal, _frame):
         nonlocal requested_off
@@ -134,6 +185,28 @@ def main():
     activated = False
     requested_off = False
     log = (output/'controllers.log').open('w')
+
+    def play():
+        state('replaying', 'Approaching the first CSV pose, then replaying both arms.')
+        try:
+            node.run()
+        finally:
+            node.close_metrics()
+        if not requested_off:
+            state('holding', 'Replay finished; controllers retain the final CSV targets and accept the next replay.')
+            print('REPLAY COMPLETE: holding final recorded pose. Start another replay or use ./torque_off.sh.', flush=True)
+
+    def hold_error(exc):
+        if phase != 'holding_error':
+            print(f'Replay stopped: {exc}', file=sys.stderr, flush=True)
+        if node and phase != 'holding_error':
+            try:
+                node.hold()
+            except Exception as hold_exc:
+                print(f'Hold could not be confirmed: {hold_exc}', file=sys.stderr)
+            node.close_metrics()
+        state('holding_error', str(exc))
+
     state('starting', 'Checking devices and starting the follower controllers.')
     signal.signal(signal.SIGUSR1, torque_off)
     signal.signal(signal.SIGTERM, torque_off)
@@ -142,6 +215,8 @@ def main():
         try:
             for follower in followers.values():
                 follower.prepare_hold()
+            if followers:
+                session['devices'] = {side: follower.identity for side, follower in followers.items()}
         finally:
             for follower in followers.values():
                 follower.close()
@@ -173,22 +248,12 @@ def main():
         if not requested_off:
             if not node.ready():
                 raise RuntimeError(f'Controllers not ready. See {output}/controllers.log')
-            state('replaying', 'Approaching the first CSV pose, then replaying both arms.')
-            node.run()
-        if not requested_off:
-            state('holding', 'Replay finished; both controllers retain the final CSV targets.')
-            print('REPLAY COMPLETE: holding final recorded pose. Use ./torque_off.sh to release.', flush=True)
+            play()
     except (KeyboardInterrupt, Exception) as exc:
-        print(f'Replay stopped: {exc}', file=sys.stderr, flush=True)
-        if node:
-            try:
-                node.hold()
-            except Exception as hold_error:
-                print(f'Hold could not be confirmed: {hold_error}', file=sys.stderr)
         if not activated:
             state('error', str(exc))
             raise SystemExit(1)
-        state('holding_error', str(exc))
+        hold_error(exc)
     try:
         while activated and not requested_off:
             try:
@@ -200,8 +265,26 @@ def main():
                         raise RuntimeError('Follower feedback is unavailable while holding.')
                 else:
                     time.sleep(.1)
+                if request_path.exists():
+                    request = json.loads(request_path.read_text())
+                    request_path.unlink()
+                    args.request_id = request['request_id']
+                    if phase != 'holding':
+                        raise RuntimeError('Cannot start another replay after a controller or replay error.')
+                    next_take, next_metadata = recording(request['take'])
+                    next_args = argparse.Namespace(**request, mock=args.mock)
+                    check_session(next_metadata, next_args, session)
+                    if requested_off:
+                        continue
+                    args.take = next_take.name
+                    args.align, args.speed = request['align'], request['speed']
+                    take, metadata = next_take, next_metadata
+                    output = new_output()
+                    node.set_recording([str(take/'left.csv'), str(take/'right.csv')],
+                                       output/'metrics.csv', args.align, args.speed)
+                    play()
             except (KeyboardInterrupt, Exception) as exc:
-                state('holding_error', str(exc))
+                hold_error(exc)
                 time.sleep(.1)
     finally:
         signal.signal(signal.SIGUSR1, signal.SIG_IGN)
@@ -228,8 +311,9 @@ def main():
             except Exception as exc:
                 state('error', f'Torque OFF not confirmed: {exc}')
                 raise
-        for path in (output, *output.rglob('*')):
-            os.chown(path, uid, gid)
+        for directory in outputs:
+            for path in (directory, *directory.rglob('*')):
+                os.chown(path, uid, gid)
 
 
 if __name__ == '__main__':

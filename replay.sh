@@ -11,6 +11,7 @@ Usage: ./replay.sh [TAKE] [--speed 1] [--align 10]
        ./replay.sh --status
        ./torque_off.sh
 Replay CLI returns after playback; the final pose stays held until torque_off.sh.
+Run another replay while holding to reuse the controllers without releasing torque.
 TAKE defaults to package_data; local recordings belong in data/TAKE/.
 EOF
     exit
@@ -76,22 +77,42 @@ if [[ " $* " == *' --inspect '* || " $* " == *' --check '* ]]; then
 fi
 exec {replay_lock}>"/tmp/omx-ai-dualarm-replay-$(id -u).lock"
 flock -n "$replay_lock" || { echo 'Another replay CLI is running.' >&2; exit 1; }
+replay_reuse=false
 if docker_call container inspect "$replay_container" >/dev/null 2>&1; then
-    echo 'Previous session exists. Run ./torque_off.sh before another replay.' >&2
-    exit 1
+    if [[ $(docker_call inspect --format '{{.State.Running}}' "$replay_container") != true ]]; then
+        echo 'Previous session stopped. Run ./torque_off.sh to verify shutdown first.' >&2
+        exit 1
+    fi
+    replay_status=$(docker_call exec "$replay_container" cat /results/status.json)
+    if [[ $replay_status != *'"protocol": 2'* ]]; then
+        echo 'Active session uses an older version. Support the arms and run ./torque_off.sh once before using this version.' >&2
+        exit 1
+    fi
+    replay_data_root=$(docker_call inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}' "$replay_container")
+    if [[ $replay_data_root != "$replay_root/data" ]]; then
+        echo "Run the next replay from the active workspace: ${replay_data_root%/data}" >&2
+        exit 1
+    fi
+    replay_reuse=true
 fi
 runtime_flags=()
 if [[ " $* " != *' --mock '* ]]; then
     printf '%s\n' '양팔과 그리퍼가 움직입니다. 이동 경로를 비워 주세요.'
-    read -r -p 'Enter: 토크 ON 및 양팔 재생 시작 (취소: Ctrl+C): ' replay_answer
+    read -r -p 'Enter: 양팔 재생 시작 (취소: Ctrl+C): ' replay_answer
     [[ -z $replay_answer ]] || { echo 'Cancelled; press Enter without text to start.'; exit; }
     runtime_flags+=(--privileged --pid=host -v /dev:/dev)
 fi
-rm -f "$replay_root/results/status.json"
-docker_call run -d --name "$replay_container" --init "${runtime_flags[@]}" \
-    --network host --ipc host -e "HOST_UID=$(id -u)" -e "HOST_GID=$(id -g)" \
-    -v "$replay_root/data:/data:ro" -v "$replay_root/results:/results" \
-    "$replay_image" "$@" --confirmed >/dev/null
+replay_request="$(date +%s%N)-$$"
+if [[ $replay_reuse == true ]]; then
+    docker_call exec "$replay_container" /app/entrypoint.sh "$@" \
+        --confirmed --enqueue --request-id "$replay_request"
+else
+    rm -f "$replay_root/results/status.json"
+    docker_call run -d --name "$replay_container" --init "${runtime_flags[@]}" \
+        --network host --ipc host -e "HOST_UID=$(id -u)" -e "HOST_GID=$(id -g)" \
+        -v "$replay_root/data:/data:ro" -v "$replay_root/results:/results" \
+        "$replay_image" "$@" --confirmed --request-id "$replay_request" >/dev/null
+fi
 interrupt_replay() {
     docker_call kill --signal INT "$replay_container" >/dev/null 2>&1 || true
     echo 'Replay interrupted; controllers remain active. Support the arms and run ./torque_off.sh.' >&2
@@ -106,9 +127,9 @@ while true; do
             echo '토크 OFF 및 제어 종료가 완료되었습니다.'
             exit 0
         fi
-        if [[ $replay_status == *'"phase": "holding"'* ]]; then
+        if [[ $replay_status == *"\"request_id\": \"$replay_request\""* && $replay_status == *'"phase": "holding"'* ]]; then
             docker_call logs --tail 8 "$replay_container"
-            echo '재생 종료: 마지막 기록 자세에서 토크 유지 중입니다. 해제: ./torque_off.sh'
+            echo '재생 종료: 마지막 자세에서 토크 유지 중입니다. 다음 재생: ./replay.sh TAKE / 해제: ./torque_off.sh'
             exit
         fi
         if [[ $replay_status == *'"phase": "holding_error"'* || $replay_status == *'"phase": "error"'* ]]; then
@@ -116,7 +137,7 @@ while true; do
             echo 'Replay failed. Inspect ./replay.sh --status; release with ./torque_off.sh.' >&2
             exit 1
         fi
-        if [[ $replay_status == *'"phase": "replaying"'* && $replay_phase != replaying ]]; then
+        if [[ $replay_status == *"\"request_id\": \"$replay_request\""* && $replay_status == *'"phase": "replaying"'* && $replay_phase != replaying ]]; then
             echo '첫 기록 자세로 접근한 뒤 양팔 궤적을 재생 중입니다.'
             replay_phase=replaying
         fi

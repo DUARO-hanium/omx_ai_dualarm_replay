@@ -113,6 +113,23 @@ class DualFollowerReplayer(Node):
         self.metrics_writer.writerow(header)
         self.metrics_start = time.monotonic()
 
+    def close_metrics(self):
+        self.metrics_writer = None
+        if self.metrics_file is not None:
+            self.metrics_file.flush()
+            self.metrics_file.close()
+            self.metrics_file = None
+
+    def set_recording(self, files, metrics_path, align, speed):
+        self.close_metrics()
+        self.files = files
+        self.metrics_path = str(metrics_path)
+        self.align = align
+        self.speed = speed
+        self.sent = False
+        self.finished = False
+        self.metrics_count = 0
+
     def metrics_callback(self):
         if self.metrics_writer is None:
             return
@@ -225,7 +242,5 @@ class DualFollowerReplayer(Node):
         )
 
     def destroy_node(self):
-        if self.metrics_file is not None:
-            self.metrics_file.flush()
-            self.metrics_file.close()
+        self.close_metrics()
         super().destroy_node()
