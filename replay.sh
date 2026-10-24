@@ -5,12 +5,13 @@ replay_container=omx-ai-dualarm-replay
 replay_image=omx-ai-dualarm-replay:1.1.0
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then
     cat <<'EOF'
-Usage: ./replay.sh [package_data] [--speed 1] [--align 10]
+Usage: ./replay.sh [TAKE] [--speed 1] [--align 10]
        ./replay.sh package_data --mock --speed 20 --align 1
        ./replay.sh package_data --inspect|--check
        ./replay.sh --status
        ./torque_off.sh
 Replay CLI returns after playback; the final pose stays held until torque_off.sh.
+TAKE defaults to package_data; local recordings belong in data/TAKE/.
 EOF
     exit
 fi
@@ -82,8 +83,8 @@ fi
 runtime_flags=()
 if [[ " $* " != *' --mock '* ]]; then
     printf '%s\n' '양팔과 그리퍼가 움직입니다. 이동 경로를 비워 주세요.'
-    read -r -p 'play + Enter: 토크 ON 및 양팔 재생 시작: ' replay_answer
-    [[ $replay_answer == play ]] || { echo 'Cancelled; torque remains OFF.'; exit; }
+    read -r -p 'Enter: 토크 ON 및 양팔 재생 시작 (취소: Ctrl+C): ' replay_answer
+    [[ -z $replay_answer ]] || { echo 'Cancelled; press Enter without text to start.'; exit; }
     runtime_flags+=(--privileged --pid=host -v /dev:/dev)
 fi
 rm -f "$replay_root/results/status.json"

@@ -89,8 +89,8 @@ def main():
     if not math.isfinite(args.align) or args.align <= .1 or not math.isfinite(args.speed) or args.speed <= 0:
         parser.error('Require --align > 0.1 and --speed > 0.')
     take = (Path('/data') / args.take).resolve()
-    if take != Path('/data/package_data'):
-        parser.error('The published recording is package_data.')
+    if take.parent != Path('/data') or not take.is_dir():
+        parser.error('Choose an existing recording folder directly under data/.')
     metadata = inspect(take)
     if args.inspect:
         return
@@ -111,7 +111,7 @@ def main():
         print('Device coordinates, hardware errors and torque OFF checked; no settings written.')
         return
     if not args.mock and not args.confirmed:
-        parser.error('Start real replay with ./replay.sh package_data and type play.')
+        parser.error('Start real replay with ./replay.sh TAKE and press Enter.')
 
     output = Path('/results') / f'{args.take}-{datetime.now(timezone.utc):%Y%m%dT%H%M%S%fZ}'
     output.mkdir(parents=True)

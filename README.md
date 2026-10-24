@@ -20,7 +20,7 @@ cd omx_ai_dualarm_replay
 호스트 ROS 설치나 수동 패치·설정 파일 수정은 필요하지 않습니다.
 기존에 실행한 로봇 제어 프로그램은 먼저 종료합니다.
 
-`play` + Enter를 입력하면 다음 순서로 진행합니다.
+확인 문구에서 **Enter만 누르면** 다음 순서로 진행합니다. 취소는 Ctrl+C입니다.
 
 1. 현재 자세에서 토크를 활성화하고 첫 기록 자세까지 기본 10초 동안 접근합니다.
 2. 좌우 CSV를 공통 시작 시각에 원래 속도로 재생합니다.
@@ -57,6 +57,16 @@ CSV는 `time,joint1,joint2,joint3,joint4,joint5,gripper_joint_1`, 각도 단위�
 각도·시간·고정 구간을 수정하거나 클리핑하지 않습니다. 기본 `--speed 1`은 기록 시간을 유지합니다.
 모터 모델·homing offset·회전 방향이 기록 당시와 다르면 실행을 막습니다.
 다른 보드는 `--left-port 경로 --right-port 경로`로 지정할 수 있으나 기구와 모터 좌표가 같아야 합니다.
+
+같은 형식으로 새로 녹화한 데이터는 `left.csv`, `right.csv`, `metadata.json`을 함께
+`data/녹화이름/`에 복사하고 `./replay.sh 녹화이름`으로 실행합니다. 예를 들어:
+
+```bash
+cp -r ~/projects/omx_ai_bimanual_ws/trajectories/take05 data/
+./replay.sh take05
+```
+
+기본 녹화는 `package_data`이며, 추가 녹화 폴더는 Git에서 제외됩니다.
 
 팔 관절은 확장 위치 모드(4), 그리퍼는 전류 기반 위치 모드(5), 그리퍼 전류는 100 mA입니다.
 기존 단일 회전 위치 제한과 그리퍼 보정 범위는 적용하지 않으며 모터 오류 보호는 유지합니다.
