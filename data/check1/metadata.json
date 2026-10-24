@@ -1,0 +1,122 @@
+{
+  "format": "replay_final_csv_v1",
+  "status": "complete",
+  "started_utc": "2026-10-24T01:18:29.177468+00:00",
+  "target_hz": 30.0,
+  "joint_names": [
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "gripper_joint_1"
+  ],
+  "units": "radian",
+  "samples": 761,
+  "duration_s": 25.365525997505756,
+  "max_read_span_s": 0.013210739998612553,
+  "capture_mode": "hand_guided_hold",
+  "holds": [],
+  "initial_positions_rad": {
+    "left": [
+      0.056757289151561974,
+      -2.032524543948681,
+      1.6904468282497698,
+      1.6781749819466842,
+      -0.016873788666948997,
+      0.7025632008514169
+    ],
+    "right": [
+      0.02454369260596323,
+      -1.9987769666151973,
+      1.7441361558257666,
+      1.532446807097549,
+      -0.03681553890946221,
+      0.8191457407307254
+    ]
+  },
+  "devices": {
+    "left": {
+      "device": "/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_9A866EFE5157375037202020FF0C1B37-if00",
+      "motors": {
+        "11": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "12": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "13": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "14": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "15": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "16": {
+          "model": 1200,
+          "homing_offset": 23,
+          "drive_mode": 4,
+          "operating_mode": 5
+        }
+      }
+    },
+    "right": {
+      "device": "/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_6AFAC93B5157375037202020FF0F272E-if00",
+      "motors": {
+        "11": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "12": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "13": {
+          "model": 1060,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "14": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "15": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 4
+        },
+        "16": {
+          "model": 1200,
+          "homing_offset": 0,
+          "drive_mode": 4,
+          "operating_mode": 5
+        }
+      }
+    }
+  }
+}

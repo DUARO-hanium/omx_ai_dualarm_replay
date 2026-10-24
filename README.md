@@ -1,8 +1,13 @@
 # OMX-AI dual-arm replay
 
 OMX-AI 팔로워 두 대의 관절·그리퍼 궤적을 CLI로 동시에 재생합니다.
-**`data/package_data`는 기존 take04의 원본 데이터**이며, 다른 녹화 데이터는 포함하지 않습니다.
-2,764프레임·92.10초, 좌우 CSV와 장치 좌표 정보로 구성됩니다.
+녹화별로 좌우 CSV와 장치 좌표 정보를 포함합니다.
+
+| 데이터 이름 | 원본 녹화 | 프레임 | 재생 시간 |
+| --- | --- | ---: | ---: |
+| `package_data` | take04 | 2,764 | 92.10초 |
+| `check1` | take11 | 761 | 25.37초 |
+| `check2` | take12 | 426 | 14.19초 |
 
 ## Clone 후 실행
 
@@ -14,6 +19,8 @@ git clone https://github.com/DUARO-hanium/omx_ai_dualarm_replay.git
 cd omx_ai_dualarm_replay
 ./replay.sh package_data
 ```
+
+다른 녹화는 `./replay.sh check1` 또는 `./replay.sh check2`로 선택합니다.
 
 첫 실행은 필요한 Docker를 공식 Ubuntu 저장소에서 설치하고(sudo 비밀번호 입력),
 고정 digest의 ROBOTIS 이미지로 ROS 2 Jazzy 환경을 자동 빌드합니다. 인터넷 연결이 필요합니다.
@@ -66,7 +73,7 @@ cp -r ~/projects/omx_ai_bimanual_ws/trajectories/take05 data/
 ./replay.sh take05
 ```
 
-기본 녹화는 `package_data`이며, 추가 녹화 폴더는 Git에서 제외됩니다.
+기본 녹화는 `package_data`이며, `package_data`·`check1`·`check2` 이외의 녹화 폴더는 Git에서 제외됩니다.
 
 팔 관절은 확장 위치 모드(4), 그리퍼는 전류 기반 위치 모드(5), 그리퍼 전류는 100 mA입니다.
 기존 단일 회전 위치 제한과 그리퍼 보정 범위는 적용하지 않으며 모터 오류 보호는 유지합니다.

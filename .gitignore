@@ -1,6 +1,8 @@
 /results/
 /data/*
 !/data/package_data/
+!/data/check1/
+!/data/check2/
 __pycache__/
 *.py[cod]
 *.tmp
